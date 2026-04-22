@@ -1,83 +1,77 @@
-# 🎻 Violin Studio (ViolinHub)
+# Violin Studio (ViolinHub)
 
-一个为小提琴家、教师和学生打造的全栈式智能练习辅助环境。集成视频分析、实时标注、专业练习工具及练习录制功能。
+An all-in-one smart practice environment designed for violinists, teachers, and students. It integrates video analysis, real-time annotation, professional practice tools, and session recording into a single, cohesive workflow.
 
 ![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi)
 ![JavaScript](https://img.shields.io/badge/Frontend-VanillaJS-F7DF1E?style=flat-square&logo=javascript)
 ![TailwindCSS](https://img.shields.io/badge/CSS-Tailwind-38B2AC?style=flat-square&logo=tailwind-css)
 
-## ✨ 核心特性
+## Core Features
 
-### 🎥 智能视频工作区
-- **交互式标注**：在视频任意时间点添加笔记，点击时间戳跳转，方便回看技术细节。
-- **镜像模式 (Mirror)**：一键翻转画面，像照镜子一样观察持琴姿势和弓段分配。
-- **A-B 循环段落**：自定义起止点，反复循环攻克技术难点。
+### Smart Video Workspace
+- Interactive Annotations: Add notes at specific timestamps; click to jump back to analyze technical details.
+- Mirror Mode: Flip the video horizontally to observe posture and bow distribution as if looking into a mirror.
+- A-B Looping: Define start and end points to loop difficult passages indefinitely.
 
-### 🛠 专业练习工具箱
-- **高级节拍器**：支持多种拍号（2/4, 3/4, 4/4, 6/8）和速度预设，Web Audio API 驱动，精准稳定。
-- **全频调音器**：实时频率检测，针对小提琴四根开弦（G, D, A, E）进行了视觉强化。
-- **标准音参考**：内置纯正正弦波 A4 440Hz 及其他音高参考。
+### Professional Practice Toolkit
+- Advanced Metronome: Supports multiple time signatures (2/4, 3/4, 4/4, 6/8) and presets. Powered by Web Audio API for high precision.
+- Chromatic Tuner: Real-time pitch detection with visual reinforcement for the violin's open strings (G, D, A, E).
+- Pitch Reference: Built-in pure sine wave generator for A4 (440Hz) and other tuning references.
 
-### ⏺ 练习录制与反馈
-- **画中画录制**：支持在播放示范视频的同时，开启摄像头录制自己的练习画面。
-- **音频混音**：录制时会自动将节拍器的点击声混合进视频音轨，方便后期对位分析。
-- **自动管理**：录制后的视频自动重命名并保存至 `Upload_Inbox` 文件夹。
+### Session Recording & Feedback
+- PiP Recording: Record your own practice via webcam as a Picture-in-Picture overlay while the demonstration video plays.
+- Audio Mixing: Automatically mixes the metronome click into the recorded video track for rhythm analysis.
+- Auto-Management: Recordings are automatically named and saved to the 'Upload_Inbox' folder.
 
-### 🤖 AI 助手 (Beta)
-- 预留 AI 对话接口，可对接 Ollama 或 OpenAI，通过上下文感知你的练习进度并提供建议。
+### AI Assistant (Beta)
+- Extensible Chat Interface: Stubbed for Ollama or OpenAI integration to provide context-aware practice suggestions.
 
-## 🚀 快速开始
+## Quick Start
 
-### 1. 环境准备
-确保你的 MacOS 已安装 Python 3.9+。
+### 1. Prerequisites
+Ensure macOS is running Python 3.9+.
 
-### 2. 安装依赖
+### 2. Install Dependencies
 ```bash
 pip install fastapi uvicorn
 ```
 
-### 3. 项目结构说明
-项目启动前会自动创建以下目录：
-- `1_Repertoire/`: 存放你的示范视频或曲谱。
-- `2_Practice_Logs/`: 存放练习视频。
-- `Upload_Inbox/`: 本地录制视频的默认存储地。
-- `static/`: 前端核心文件（HTML, JS, CSS）。
+### 3. Project Structure
+The app automatically initializes the following directories:
+- 1_Repertoire/: Store demonstration videos or sheet music.
+- 2_Practice_Logs/: Archive previous practice sessions.
+- Upload_Inbox/: Default storage for locally recorded sessions.
+- static/: Core frontend assets (HTML, JS, CSS).
 
-### 4. 启动服务
-在 Cursor 终端输入：
+### 4. Launch
+Run via the Cursor terminal:
 ```bash
 python main.py
 ```
-或者直接运行：
+Or via uvicorn:
 ```bash
 uvicorn main:app --reload
 ```
-访问地址：`http://127.0.0.1:8000`
+Access the dashboard at: http://127.0.0.1:8000
 
-## 📁 目录导航
+## Directory Navigation
 ```text
 ViolinHub/
-├── main.py              # FastAPI 后端路由与文件管理
+├── main.py              # FastAPI backend & file management
 ├── static/
-│   ├── index.html       # 响应式 UI (Tailwind CSS)
-│   └── app.js           # 前端逻辑、音频算法、录制逻辑
-├── annotations.json     # 视频笔记持久化数据库
-└── Upload_Inbox/        # 录制视频自动存放处
+│   ├── index.html       # Responsive UI (Tailwind CSS)
+│   └── app.js           # Logic, audio algorithms, and recorder
+├── annotations.json     # Persistent database for video notes
+└── Upload_Inbox/        # Auto-save directory for recordings
 ```
 
-## 🛠 技术栈
-- **后端**: Python / FastAPI
-- **前端**: Vanilla JavaScript / Tailwind CSS
-- **音频**: Web Audio API (用于节拍器、调音器、音轨混合)
-- **存储**: JSON (用于标注) / 本地文件系统 (用于媒体)
+## Tech Stack
+- Backend: Python / FastAPI
+- Frontend: Vanilla JavaScript / Tailwind CSS
+- Audio Engine: Web Audio API (Metronome, Tuner, Mix-bus)
+- Persistence: JSON (Annotations) / Local File System (Media)
 
-## 📝 使用 Tips
-- **空格键**：全局控制视频播放/暂停。
-- **iPad 支持**：针对 iPad 进行了适配，支持前后摄像头切换，适合架在谱架上练习使用。
-- **PDF 查看**：将曲谱存入库中，即可在视频下方同步查看 PDF。
-
----
-*Inspired by the pursuit of musical perfection.* 🎻
-```
-
----
+## Usage Tips
+- Spacebar: Global play/pause toggle for the video player.
+- iPad Optimized: Supports front/rear camera switching, perfect for music stands.
+- PDF Integration: View scores directly below the video player by placing PDFs in the library.

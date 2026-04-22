@@ -1,0 +1,608 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Violin Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="icon" href="/favicon.ico" type="image/x-icon">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    :root {
+      --bg-deep:      #0a0a0f;
+      --bg-panel:     #0f0f18;
+      --bg-surface:   #141420;
+      --bg-hover:     #1a1a2e;
+      --border:       #1e1e32;
+      --border-light: #2a2a44;
+      --accent:       #c8a96e;
+      --accent-dim:   #8a6e3e;
+      --accent-glow:  rgba(200,169,110,0.12);
+      --text-primary: #e8e4d8;
+      --text-muted:   #6b6880;
+      --text-dim:     #3d3b50;
+      --green:        #5a8f6a;
+      --green-glow:   rgba(90,143,106,0.15);
+      --red:          #8f5a5a;
+      --red-bright:   #c47a7a;
+      --blue:         #5a7abf;
+      --blue-bright:  #7aa0e8;
+      --blue-glow:    rgba(90,122,191,0.18);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; overflow: hidden; background: var(--bg-deep); color: var(--text-primary); font-family: 'JetBrains Mono', monospace; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border-light); border-radius: 2px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--accent-dim); }
+
+    /* ── Layout ── */
+    #app { display: flex; height: 100vh; width: 100vw; overflow: hidden; }
+
+    .tool-badge {
+      background: rgba(10,10,20,0.7); border: 1px solid var(--border-light); border-radius: 4px;
+      padding: 4px 8px; font-size: 9px; color: var(--text-primary); cursor: pointer;
+      backdrop-filter: blur(4px); transition: all 0.15s;
+      font-family: 'JetBrains Mono', monospace; text-transform: uppercase;
+    }
+    .tool-badge:hover { background: var(--bg-hover); border-color: var(--accent); }
+    .tool-badge.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+
+    /* ── File Tree ── */
+    .folder-group .folder-children { display: none; }
+    .folder-group.open > .folder-children { display: block; }
+
+    .folder-header {
+      display: flex; align-items: center; gap: 8px; padding: 8px 0;
+      cursor: pointer; color: var(--text-muted); transition: color 0.2s;
+    }
+    .folder-header:hover { color: var(--accent); }
+
+    .folder-arrow { width: 12px; height: 12px; opacity: 0.4; transition: transform 0.2s; }
+    .folder-group.open > .folder-header .folder-arrow { transform: rotate(180deg); }
+    .folder-name { font-size: 11px; font-weight: 500; letter-spacing: 0.05em; text-transform: uppercase; }
+
+    .file-item { border-left: 1px solid transparent; margin-left: 6px; }
+    .file-item.active { border-left: 1px solid var(--accent); }
+
+    /* ── Left Sidebar ── */
+    #sidebar-left { width: 256px; min-width: 256px; background: var(--bg-panel); border-right: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    #logo-area { padding: 22px 20px 18px; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .logo-label { font-family: 'Cormorant Garamond', serif; font-size: 22px; font-weight: 300; letter-spacing: 0.08em; color: var(--accent); display: flex; align-items: center; gap: 10px; }
+    .logo-label .logo-icon { width: 28px; height: 28px; opacity: 0.85; }
+    .logo-sub { font-size: 9px; letter-spacing: 0.3em; color: var(--text-muted); text-transform: uppercase; margin-top: 3px; padding-left: 38px; }
+    #file-tree-header { padding: 14px 20px 10px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+    .section-label { font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-muted); }
+    #refresh-btn { width: 22px; height: 22px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; color: var(--text-muted); transition: all 0.15s; background: transparent; border: none; }
+    #refresh-btn:hover { background: var(--bg-hover); color: var(--accent); }
+    #refresh-btn.spinning svg { animation: spin 0.6s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    #file-tree { flex: 1; overflow-y: auto; padding: 4px 8px 16px; }
+    .file-item { display: flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 5px; cursor: pointer; font-size: 11.5px; color: var(--text-muted); transition: all 0.12s; user-select: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-item:hover { background: var(--bg-hover); color: var(--text-primary); }
+    .file-item.active { background: var(--accent-glow); color: var(--accent); border: 1px solid rgba(200,169,110,0.15); }
+    .file-item .file-icon { flex-shrink: 0; width: 14px; }
+    .file-item .file-name { overflow: hidden; text-overflow: ellipsis; }
+    .file-tree-empty { padding: 24px 12px; font-size: 11px; color: var(--text-dim); text-align: center; line-height: 1.7; }
+    .file-tree-empty span { display: block; }
+    #status-bar { padding: 5px 20px; border-top: 1px solid var(--border); font-size: 9px; letter-spacing: 0.12em; color: var(--text-dim); display: flex; gap: 20px; align-items: center; flex-shrink: 0; }
+    .status-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); display: inline-block; margin-right: 5px; }
+
+    /* ── Main Workspace ── */
+    #main-workspace { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: var(--bg-deep); }
+    #video-panel { height: 60%; min-height: 0; background: #000; position: relative; border-bottom: 1px solid var(--border); }
+    #main-player { width: 100%; height: 100%; display: block; object-fit: contain; }
+
+    /* Add Note button — overlaid on video */
+    #add-note-btn {
+      position: absolute; bottom: 12px; right: 12px; z-index: 10;
+      display: flex; align-items: center; gap: 6px; padding: 6px 13px;
+      background: rgba(10,10,20,0.82); border: 1px solid var(--blue); border-radius: 5px;
+      font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.14em; text-transform: uppercase;
+      color: var(--blue-bright); cursor: pointer; transition: all 0.15s; backdrop-filter: blur(4px);
+    }
+    #add-note-btn:hover { background: var(--blue-glow); border-color: var(--blue-bright); }
+
+    #video-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; pointer-events: none; }
+    #video-placeholder.hidden { display: none; }
+    .placeholder-icon { opacity: 0.12; }
+    .placeholder-text { font-family: 'Cormorant Garamond', serif; font-size: 15px; font-style: italic; color: var(--text-muted); opacity: 0.5; letter-spacing: 0.05em; }
+
+    /* ── Camera PiP Preview ── */
+    #camera-preview {
+      position: absolute; bottom: 50px; left: 12px;
+      width: 160px; height: 120px;
+      border-radius: 8px; border: 2px solid var(--border-light);
+      background: #000; z-index: 10;
+      display: none; object-fit: cover;
+      transform: scaleX(-1); /* front-camera mirror */
+    }
+    #camera-preview.flip-back { transform: scaleX(1); }
+
+    /* Recording indicator badge on PiP */
+    #rec-indicator {
+      display: none; position: absolute; bottom: 172px; left: 12px; z-index: 11;
+      background: rgba(143,90,90,0.9); border: 1px solid var(--red-bright);
+      border-radius: 4px; padding: 2px 7px;
+      font-size: 9px; letter-spacing: 0.14em; color: var(--red-bright);
+      backdrop-filter: blur(4px); gap: 5px; align-items: center;
+    }
+    #rec-indicator.visible { display: flex; }
+    .rec-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--red-bright); animation: blink 1s ease-in-out infinite; }
+    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+    /* ── Score Panel ── */
+    #score-panel { height: 40%; min-height: 0; background: var(--bg-surface); position: relative; display: flex; flex-direction: column; }
+    #score-header { padding: 8px 16px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+    #score-filename { font-size: 10px; color: var(--text-muted); letter-spacing: 0.05em; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #score-viewer { flex: 1; width: 100%; border: none; background: var(--bg-surface); }
+    #score-placeholder { position: absolute; inset: 40px 0 0 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; pointer-events: none; }
+    #score-placeholder.hidden { display: none; }
+
+    /* ── Right Sidebar ── */
+    #sidebar-right { width: 320px; min-width: 320px; background: var(--bg-panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
+    #tab-bar { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+    .tab-btn { flex: 1; padding: 12px 4px; font-family: 'JetBrains Mono', monospace; font-size: 8.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--text-muted); background: transparent; border: none; cursor: pointer; transition: all 0.15s; position: relative; }
+    .tab-btn:hover { color: var(--text-primary); }
+    .tab-btn.active { color: var(--accent); }
+    .tab-btn.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: var(--accent); }
+    .tab-panel { display: none; flex: 1; flex-direction: column; overflow: hidden; }
+    .tab-panel.active { display: flex; }
+
+    /* ── AI tab ── */
+    #ai-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+    .msg { max-width: 100%; padding: 10px 13px; border-radius: 6px; font-size: 11.5px; line-height: 1.65; }
+    .msg.assistant { background: var(--bg-surface); border: 1px solid var(--border); color: var(--text-primary); align-self: flex-start; }
+    .msg.user { background: var(--accent-glow); border: 1px solid rgba(200,169,110,0.15); color: var(--accent); align-self: flex-end; }
+    .msg-label { font-size: 8.5px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-dim); margin-bottom: 4px; }
+    #ai-input-area { padding: 12px; border-top: 1px solid var(--border); display: flex; gap: 8px; flex-shrink: 0; }
+    #ai-input { flex: 1; background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 5px; padding: 8px 11px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-primary); resize: none; outline: none; transition: border-color 0.15s; line-height: 1.5; }
+    #ai-input::placeholder { color: var(--text-dim); }
+    #ai-input:focus { border-color: var(--accent-dim); }
+    #ai-send { width: 34px; height: 34px; flex-shrink: 0; align-self: flex-end; background: var(--accent-glow); border: 1px solid rgba(200,169,110,0.2); border-radius: 5px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--accent); transition: all 0.15s; }
+    #ai-send:hover { background: rgba(200,169,110,0.2); }
+
+    /* ── Notes tab ── */
+    #annotations-list { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+
+    .ann-card { background: var(--bg-surface); border: 1px solid var(--border); border-left: 2px solid var(--blue); border-radius: 6px; padding: 9px 12px; font-size: 11px; line-height: 1.6; display: flex; gap: 10px; align-items: flex-start; }
+    .ann-ts-link { color: var(--blue-bright); text-decoration: underline; cursor: pointer; font-size: 10.5px; letter-spacing: 0.03em; white-space: nowrap; flex-shrink: 0; padding-top: 1px; background: none; border: none; font-family: 'JetBrains Mono', monospace; transition: color 0.12s; }
+    .ann-ts-link:hover { color: #a8c4ff; }
+    .ann-card-right { flex: 1; min-width: 0; }
+    .ann-card-text { color: var(--text-primary); word-break: break-word; }
+    .ann-card-meta { font-size: 8.5px; color: var(--text-dim); margin-top: 4px; }
+
+    .note-card { background: var(--bg-surface); border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; font-size: 11px; line-height: 1.6; }
+    .note-card .note-meta { font-size: 8.5px; color: var(--text-dim); margin-bottom: 4px; }
+    .note-card .note-text { color: var(--text-primary); }
+
+    #inline-ann-wrap { padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; display: none; }
+    #inline-ann-wrap.visible { display: block; }
+    .inline-ann-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .inline-ts-badge { font-size: 10px; color: var(--blue-bright); background: var(--blue-glow); border: 1px solid rgba(90,122,191,0.25); border-radius: 4px; padding: 2px 9px; letter-spacing: 0.06em; }
+    .inline-ann-cancel { font-size: 9px; color: var(--text-dim); cursor: pointer; background: none; border: none; font-family: 'JetBrains Mono', monospace; letter-spacing: 0.1em; text-transform: uppercase; transition: color 0.12s; }
+    .inline-ann-cancel:hover { color: var(--red); }
+    #inline-ann-input { width: 100%; background: var(--bg-surface); border: 1px solid var(--blue); border-radius: 5px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-primary); resize: none; outline: none; transition: border-color 0.15s; line-height: 1.5; margin-bottom: 8px; }
+    #inline-ann-input::placeholder { color: var(--text-dim); }
+    #inline-ann-input:focus { border-color: var(--blue-bright); }
+    #inline-ann-save { width: 100%; padding: 7px; background: var(--blue-glow); border: 1px solid rgba(90,122,191,0.3); border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--blue-bright); cursor: pointer; transition: all 0.15s; }
+    #inline-ann-save:hover { background: rgba(90,122,191,0.25); }
+
+    #general-note-area { padding: 10px 12px; border-top: 1px solid var(--border); flex-shrink: 0; }
+    #general-note-input { width: 100%; background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 5px; padding: 8px 10px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--text-primary); resize: none; outline: none; transition: border-color 0.15s; line-height: 1.5; margin-bottom: 8px; }
+    #general-note-input::placeholder { color: var(--text-dim); }
+    #general-note-input:focus { border-color: var(--accent-dim); }
+    #general-note-save { width: 100%; padding: 7px; background: var(--accent-glow); border: 1px solid rgba(200,169,110,0.2); border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); cursor: pointer; transition: all 0.15s; }
+    #general-note-save:hover { background: rgba(200,169,110,0.18); }
+
+    /* ── Tools tab ── */
+    #tab-tools { overflow-y: auto; }
+    .tool-section { border-bottom: 1px solid var(--border); padding: 16px 16px 20px; }
+    .tool-title { font-size: 9px; letter-spacing: 0.25em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 14px; display: flex; align-items: center; gap: 7px; }
+
+    /* Metronome */
+    #metro-bpm-display { text-align: center; margin-bottom: 12px; }
+    #metro-bpm-num { font-family: 'Cormorant Garamond', serif; font-size: 52px; font-weight: 300; color: var(--text-primary); line-height: 1; letter-spacing: -0.02em; }
+    #metro-bpm-unit { font-size: 9px; letter-spacing: 0.3em; color: var(--text-muted); margin-top: 2px; }
+    #metro-pendulum-wrap { display: flex; justify-content: center; margin-bottom: 12px; height: 44px; align-items: flex-end; }
+    #metro-pendulum { width: 2px; height: 38px; background: var(--accent); transform-origin: top center; border-radius: 1px; }
+    #metro-pendulum.swing-l { animation: swL var(--swing-dur,0.5s) ease-in-out forwards; }
+    #metro-pendulum.swing-r { animation: swR var(--swing-dur,0.5s) ease-in-out forwards; }
+    @keyframes swL { 0%{transform:rotate(0deg)} 50%{transform:rotate(-30deg)} 100%{transform:rotate(0deg)} }
+    @keyframes swR { 0%{transform:rotate(0deg)} 50%{transform:rotate( 30deg)} 100%{transform:rotate(0deg)} }
+    #metro-pendulum.flash { background: #e8e4d8; }
+    #metro-beats { display: flex; gap: 6px; justify-content: center; margin-bottom: 12px; }
+    .beat-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--border-light); transition: background 0.08s, box-shadow 0.08s; }
+    .beat-dot.active-accent { background: var(--accent); box-shadow: 0 0 7px rgba(200,169,110,0.55); }
+    .beat-dot.active-beat   { background: var(--green);  box-shadow: 0 0 5px rgba(90,143,106,0.45); }
+    #metro-slider { width: 100%; margin-bottom: 10px; accent-color: var(--accent); cursor: pointer; }
+    #metro-sig { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .sig-label { font-size: 9px; color: var(--text-muted); letter-spacing: 0.1em; }
+    .sig-select { background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 4px; color: var(--text-primary); font-family: 'JetBrains Mono', monospace; font-size: 10px; padding: 3px 6px; outline: none; cursor: pointer; }
+    .metro-presets { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .metro-preset { padding: 3px 8px; background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 4px; font-size: 9.5px; color: var(--text-muted); cursor: pointer; transition: all 0.12s; font-family: 'JetBrains Mono', monospace; }
+    .metro-preset:hover { border-color: var(--accent-dim); color: var(--accent); }
+    #metro-controls { display: flex; gap: 8px; }
+    .metro-btn { flex: 1; padding: 8px; border-radius: 5px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; border: 1px solid; transition: all 0.15s; }
+    #metro-start { background: var(--green-glow); border-color: rgba(90,143,106,0.35); color: #7ab88a; }
+    #metro-start:hover { background: rgba(90,143,106,0.25); }
+    #metro-stop  { background: var(--bg-surface); border-color: var(--border-light); color: var(--text-muted); }
+    #metro-stop:hover  { border-color: var(--red); color: #b87a7a; }
+
+    /* Tuner */
+    #tuner-note { font-family: 'Cormorant Garamond', serif; font-size: 52px; font-weight: 300; color: var(--text-primary); line-height: 1; text-align: center; }
+    #tuner-sub { text-align: center; margin-bottom: 12px; }
+    #tuner-cents { font-size: 11px; color: var(--text-muted); letter-spacing: 0.05em; }
+    #tuner-freq { font-size: 9px; color: var(--text-dim); margin-top: 2px; }
+    #tuner-gauge { position: relative; height: 52px; margin-bottom: 12px; }
+    #tuner-gauge-track { position: absolute; left: 0; right: 0; top: 50%; height: 2px; background: var(--border-light); border-radius: 1px; transform: translateY(-50%); }
+    #tuner-gauge-center { position: absolute; left: 50%; top: 50%; width: 2px; height: 16px; background: var(--accent-dim); transform: translate(-50%, -50%); }
+    #tuner-needle { position: absolute; top: 50%; left: 50%; width: 3px; height: 34px; background: var(--blue-bright); border-radius: 2px; transform-origin: bottom center; transform: translate(-50%, -100%) rotate(0deg); transition: transform 0.09s ease, background 0.12s; }
+    #tuner-needle.in-tune { background: var(--green); box-shadow: 0 0 9px rgba(90,143,106,0.55); }
+    #tuner-zone-labels { position: absolute; bottom: 0; left: 0; right: 0; display: flex; justify-content: space-between; font-size: 8px; color: var(--text-dim); padding: 0 4px; }
+    #open-strings { display: flex; justify-content: center; gap: 14px; margin-bottom: 12px; }
+    .open-str { display: flex; flex-direction: column; align-items: center; gap: 2px; }
+    .open-str-note { font-family: 'Cormorant Garamond', serif; font-size: 20px; font-weight: 400; color: var(--text-muted); line-height: 1; cursor: pointer; transition: color 0.12s; }
+    .open-str-note:hover, .open-str-note.highlight { color: var(--accent); text-shadow: 0 0 10px rgba(200,169,110,0.35); }
+    .open-str-hz { font-size: 8.5px; color: var(--text-dim); }
+    #tuner-controls { display: flex; gap: 8px; }
+    #tuner-start { flex: 1; padding: 8px; border-radius: 5px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; background: var(--green-glow); border: 1px solid rgba(90,143,106,0.35); color: #7ab88a; transition: all 0.15s; }
+    #tuner-start:hover { background: rgba(90,143,106,0.25); }
+    #tuner-stop  { flex: 1; padding: 8px; border-radius: 5px; cursor: pointer; font-family: 'JetBrains Mono', monospace; font-size: 10px; letter-spacing: 0.12em; text-transform: uppercase; background: var(--bg-surface); border: 1px solid var(--border-light); color: var(--text-muted); transition: all 0.15s; }
+    #tuner-stop:hover  { border-color: var(--red); color: #b87a7a; }
+
+    /* Pitch Reference */
+    .pitch-note-grid { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 12px; }
+    .pitch-note-btn { padding: 5px 9px; background: var(--bg-surface); border: 1px solid var(--border-light); border-radius: 4px; font-family: 'JetBrains Mono', monospace; font-size: 10px; color: var(--text-muted); cursor: pointer; transition: all 0.12px; }
+    .pitch-note-btn:hover { border-color: var(--accent-dim); color: var(--accent); }
+    .pitch-note-btn.active { background: var(--accent-glow); border-color: var(--accent); color: var(--accent); }
+    #pitch-play { width: 100%; padding: 8px; background: var(--accent-glow); border: 1px solid rgba(200,169,110,0.2); border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); cursor: pointer; transition: all 0.15s; }
+    #pitch-play:hover { background: rgba(200,169,110,0.2); }
+
+    /* ── Record Tab ── */
+    #tab-record { overflow-y: auto; }
+    .record-section { padding: 20px 16px; border-bottom: 1px solid var(--border); }
+
+    /* Big record button */
+    #btn-record-main {
+      width: 100%; padding: 14px; border-radius: 8px; cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; font-size: 11px; letter-spacing: 0.14em;
+      text-transform: uppercase; border: 1px solid rgba(143,90,90,0.45);
+      background: rgba(143,90,90,0.12); color: var(--red-bright);
+      transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px;
+    }
+    #btn-record-main:hover { background: rgba(143,90,90,0.22); border-color: var(--red-bright); }
+    #btn-record-main.recording { background: rgba(143,90,90,0.3); border-color: var(--red-bright); animation: pulse-border 1.5s ease-in-out infinite; }
+    @keyframes pulse-border { 0%,100%{box-shadow:0 0 0 0 rgba(143,90,90,0.4)} 50%{box-shadow:0 0 0 6px rgba(143,90,90,0)} }
+
+    #rec-timer { font-family: 'Cormorant Garamond', serif; font-size: 36px; font-weight: 300; color: var(--red-bright); text-align: center; letter-spacing: 0.05em; margin: 12px 0 8px; display: none; }
+    #rec-timer.visible { display: block; }
+
+    #btn-flip-camera {
+      width: 100%; padding: 8px; border-radius: 5px; cursor: pointer; margin-top: 10px;
+      font-family: 'JetBrains Mono', monospace; font-size: 9.5px; letter-spacing: 0.12em;
+      text-transform: uppercase; background: var(--bg-surface); border: 1px solid var(--border-light);
+      color: var(--text-muted); transition: all 0.15s;
+    }
+    #btn-flip-camera:hover { border-color: var(--accent-dim); color: var(--accent); }
+
+    .rec-hint {
+      font-size: 9.5px; color: var(--text-dim); line-height: 1.7; margin-top: 14px;
+      padding: 10px 12px; background: var(--bg-surface); border: 1px solid var(--border);
+      border-radius: 6px;
+    }
+    .rec-hint strong { color: var(--text-muted); }
+
+    #upload-status { margin-top: 12px; font-size: 10px; color: var(--text-muted); display: none; text-align: center; }
+    #upload-status.visible { display: block; }
+    #upload-status.success { color: var(--green); }
+    #upload-status.error { color: var(--red-bright); }
+
+    .fade-in { animation: fadeIn 0.2s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ══ LEFT SIDEBAR ══ -->
+  <aside id="sidebar-left">
+    <div id="logo-area">
+      <div class="logo-label">
+        <svg class="logo-icon" viewBox="0 0 28 28" fill="none">
+          <path d="M14 3C14 3 10 7 10 13C10 16.5 11.5 19 14 21C16.5 19 18 16.5 18 13C18 7 14 3 14 3Z" stroke="#c8a96e" stroke-width="1" fill="none"/>
+          <path d="M14 21V25" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M11 25H17" stroke="#c8a96e" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M10 13C10 13 7 12 6 10" stroke="#c8a96e" stroke-width="1" stroke-linecap="round"/>
+          <path d="M18 13C18 13 21 12 22 10" stroke="#c8a96e" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+        Violin Studio
+      </div>
+      <div class="logo-sub">Practice Environment</div>
+    </div>
+    <div id="file-tree-header">
+      <span class="section-label">Library</span>
+      <button id="refresh-btn" title="Refresh">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+          <path d="M10.5 6A4.5 4.5 0 1 1 6 1.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          <path d="M6 1.5L8 3.5M6 1.5L8 0" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </button>
+    </div>
+    <div id="file-tree">
+      <div class="file-tree-empty">
+        <span style="font-size:22px;opacity:0.2;margin-bottom:8px">♩</span>
+        <span>No files loaded.</span>
+        <span style="margin-top:4px;font-size:10px">Connect your backend</span>
+        <span style="font-size:10px">to populate the library.</span>
+      </div>
+    </div>
+    <div id="status-bar">
+      <span><span class="status-dot"></span>Connected</span>
+      <span id="file-count">0 files</span>
+    </div>
+  </aside>
+
+  <!-- ══ MAIN WORKSPACE ══ -->
+  <main id="main-workspace">
+    <div id="video-panel">
+      <video id="main-player" controls playsinline></video>
+
+      <!-- Camera PiP preview — single element, correctly positioned -->
+      <video id="camera-preview" autoplay muted playsinline></video>
+
+      <!-- Recording indicator above PiP -->
+      <div id="rec-indicator">
+        <div class="rec-dot"></div>
+        <span id="rec-timer-pip">00:00</span>
+      </div>
+
+      <!-- Video toolbar (A-B loop & mirror) -->
+      <div id="video-toolbar" style="position:absolute; top:12px; right:12px; z-index:10; display:flex; gap:6px;">
+        <button id="btn-mirror" class="tool-badge">Mirror Flip</button>
+        <button id="btn-set-a" class="tool-badge">Set A</button>
+        <button id="btn-set-b" class="tool-badge">Set B</button>
+        <button id="btn-clear-ab" class="tool-badge" style="display:none;">Clear Loop</button>
+      </div>
+
+      <!-- Add Note button -->
+      <button id="add-note-btn">
+        <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+          <circle cx="5.5" cy="5.5" r="4.5" stroke="currentColor" stroke-width="1"/>
+          <path d="M5.5 3.5V7.5M3.5 5.5H7.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+        </svg>
+        Add Note
+      </button>
+
+      <div id="video-placeholder">
+        <svg class="placeholder-icon" width="64" height="64" viewBox="0 0 64 64" fill="none">
+          <rect x="8" y="14" width="48" height="36" rx="4" stroke="white" stroke-width="2"/>
+          <path d="M26 24L42 32L26 40V24Z" fill="white"/>
+        </svg>
+        <span class="placeholder-text">Select a video from the library</span>
+      </div>
+    </div>
+
+    <div id="score-panel">
+      <div id="score-header">
+        <svg width="13" height="13" viewBox="0 0 13 13" fill="none" style="opacity:0.4;flex-shrink:0">
+          <rect x="1" y="1" width="11" height="11" rx="1.5" stroke="currentColor" stroke-width="1"/>
+          <path d="M3.5 4.5H9.5M3.5 6.5H9.5M3.5 8.5H7" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+        </svg>
+        <span id="score-filename" style="color:var(--text-dim)">No score loaded</span>
+      </div>
+      <iframe id="score-viewer"></iframe>
+      <div id="score-placeholder">
+        <svg style="opacity:0.08" width="44" height="44" viewBox="0 0 44 44" fill="none">
+          <rect x="6" y="4" width="32" height="36" rx="3" stroke="white" stroke-width="1.5"/>
+          <path d="M12 14H32M12 20H32M12 26H24" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <span style="font-size:11px;color:var(--text-dim);font-style:italic;font-family:'Cormorant Garamond',serif">Select a PDF score from the library</span>
+      </div>
+    </div>
+  </main>
+
+  <!-- ══ RIGHT SIDEBAR ══ -->
+  <aside id="sidebar-right">
+    <div id="tab-bar">
+      <button class="tab-btn active" data-tab="ai">AI</button>
+      <button class="tab-btn" data-tab="notes">Notes</button>
+      <button class="tab-btn" data-tab="tools">Tools</button>
+      <button class="tab-btn" data-tab="record">Record</button>
+    </div>
+
+    <!-- AI Panel -->
+    <div class="tab-panel active" id="tab-ai">
+      <div id="ai-messages">
+        <div class="msg assistant fade-in">
+          <div class="msg-label">Assistant</div>
+          Welcome to Violin Studio. Select a video or score from your library to get started. I can help with technique, interpretation, or practice strategies.
+        </div>
+      </div>
+      <div id="ai-input-area">
+        <textarea id="ai-input" rows="2" placeholder="Ask about technique, theory…"></textarea>
+        <button id="ai-send" title="Send">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M12 7L2 2L4.5 7L2 12L12 7Z" fill="currentColor"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Notes Panel -->
+    <div class="tab-panel" id="tab-notes">
+      <div id="annotations-list">
+        <div class="file-tree-empty" style="padding-top:28px">
+          <span style="font-size:10px">No annotations yet.</span>
+          <span style="font-size:10px;margin-top:4px">Press <span style="color:var(--blue-bright)">Add Note</span></span>
+          <span style="font-size:10px">on the video to mark a timestamp.</span>
+        </div>
+      </div>
+
+      <!-- Inline video annotation input -->
+      <div id="inline-ann-wrap">
+        <div class="inline-ann-header">
+          <span class="inline-ts-badge" id="inline-ts-label">00:00.0</span>
+          <button class="inline-ann-cancel" id="inline-ann-cancel">✕ Cancel</button>
+        </div>
+        <textarea id="inline-ann-input" rows="2" placeholder="e.g. Bow pressure too heavy on the shift…"></textarea>
+        <button id="inline-ann-save">Save Annotation</button>
+      </div>
+
+      <!-- General note -->
+      <div id="general-note-area">
+        <textarea id="general-note-input" rows="2" placeholder="General practice note (no timestamp)…"></textarea>
+        <button id="general-note-save">Save Note</button>
+      </div>
+    </div>
+
+    <!-- Tools Panel -->
+    <div class="tab-panel" id="tab-tools">
+
+      <!-- METRONOME -->
+      <div class="tool-section">
+        <div class="tool-title">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M6 1L2.5 10.5H9.5L6 1Z" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
+            <line x1="6" y1="1" x2="6" y2="10.5" stroke="currentColor" stroke-width="0.7" opacity="0.5"/>
+          </svg>
+          Metronome
+        </div>
+
+        <div id="metro-bpm-display">
+          <div id="metro-bpm-num">120</div>
+          <div id="metro-bpm-unit">BPM</div>
+        </div>
+
+        <div id="metro-pendulum-wrap">
+          <div id="metro-pendulum"></div>
+        </div>
+
+        <div id="metro-beats"></div>
+        <input type="range" id="metro-slider" min="30" max="240" value="120" />
+
+        <div id="metro-sig">
+          <span class="sig-label">Time sig</span>
+          <select class="sig-select" id="metro-beats-select">
+            <option value="2">2/4</option>
+            <option value="3">3/4</option>
+            <option value="4" selected>4/4</option>
+            <option value="6">6/8</option>
+          </select>
+        </div>
+
+        <div class="metro-presets">
+          <span class="metro-preset" data-bpm="52">Largo</span>
+          <span class="metro-preset" data-bpm="76">Andante</span>
+          <span class="metro-preset" data-bpm="108">Moderato</span>
+          <span class="metro-preset" data-bpm="132">Allegro</span>
+          <span class="metro-preset" data-bpm="176">Presto</span>
+        </div>
+
+        <div id="metro-controls">
+          <button class="metro-btn" id="metro-start">▶ Start</button>
+          <button class="metro-btn" id="metro-stop">■ Stop</button>
+        </div>
+      </div>
+
+      <!-- TUNER -->
+      <div class="tool-section">
+        <div class="tool-title">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="7" r="3.5" stroke="currentColor" stroke-width="1"/>
+            <path d="M6 1V3.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            <path d="M3 3L4.5 4.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+            <path d="M9 3L7.5 4.5" stroke="currentColor" stroke-width="1" stroke-linecap="round"/>
+          </svg>
+          Chromatic Tuner
+        </div>
+
+        <div id="tuner-note" style="margin-bottom:4px">—</div>
+        <div id="tuner-sub">
+          <div id="tuner-cents">— cents</div>
+          <div id="tuner-freq">— Hz</div>
+        </div>
+
+        <div id="tuner-gauge" style="margin-top:10px">
+          <div id="tuner-gauge-track"></div>
+          <div id="tuner-gauge-center"></div>
+          <div id="tuner-needle"></div>
+          <div id="tuner-zone-labels">
+            <span>♭</span><span>in tune</span><span>♯</span>
+          </div>
+        </div>
+
+        <div id="open-strings">
+          <div class="open-str"><div class="open-str-note" data-note="G3">G</div><div class="open-str-hz">196 Hz</div></div>
+          <div class="open-str"><div class="open-str-note" data-note="D4">D</div><div class="open-str-hz">293 Hz</div></div>
+          <div class="open-str"><div class="open-str-note" data-note="A4">A</div><div class="open-str-hz">440 Hz</div></div>
+          <div class="open-str"><div class="open-str-note" data-note="E5">E</div><div class="open-str-hz">659 Hz</div></div>
+        </div>
+
+        <div id="tuner-controls">
+          <button id="tuner-start">🎙 Listen</button>
+          <button id="tuner-stop">■ Stop</button>
+        </div>
+      </div>
+
+      <!-- PITCH REFERENCE -->
+      <div class="tool-section" style="border-bottom:none">
+        <div class="tool-title">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <path d="M2 10V7M4 10V5M6 10V6M8 10V4M10 10V2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          Pitch Reference
+        </div>
+        <div class="pitch-note-grid" id="pitch-grid"></div>
+        <button id="pitch-play">▶ Play Note</button>
+      </div>
+
+    </div><!-- /tab-tools -->
+
+    <!-- Record Panel -->
+    <div class="tab-panel" id="tab-record">
+      <div class="record-section">
+        <div class="tool-title">
+          <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+            <circle cx="6" cy="6" r="4" stroke="currentColor" stroke-width="1"/>
+            <circle cx="6" cy="6" r="2" fill="currentColor"/>
+          </svg>
+          Practice Recording
+        </div>
+
+        <!-- Timer display -->
+        <div id="rec-timer">00:00</div>
+
+        <!-- Main record/stop button -->
+        <button id="btn-record-main">
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none">
+            <circle cx="5" cy="5" r="4" fill="currentColor"/>
+          </svg>
+          <span id="btn-record-label">Start Recording</span>
+        </button>
+
+        <!-- Camera flip for iPad -->
+        <button id="btn-flip-camera">⟲ Flip Camera (Front / Rear)</button>
+
+        <div class="rec-hint">
+          <strong>How it works:</strong><br>
+          1. Load a demonstration video from the library.<br>
+          2. Start the Metronome in the Tools tab.<br>
+          3. Press <strong>Start Recording</strong> — the demo plays in the main window; your camera appears as a picture-in-picture overlay.<br>
+          4. Press <strong>Stop</strong> — the recording uploads automatically to <em>Upload_Inbox</em>.<br>
+          Metronome click is mixed into the recording audio.
+        </div>
+
+        <div id="upload-status"></div>
+      </div>
+    </div><!-- /tab-record -->
+
+  </aside>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
